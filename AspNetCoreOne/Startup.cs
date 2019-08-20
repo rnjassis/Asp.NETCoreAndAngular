@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.SpaServices.AngularCli;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Newtonsoft.Json.Serialization;
 
 namespace AspNetCoreOne
 {
@@ -21,10 +22,18 @@ namespace AspNetCoreOne
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
-
+            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1)
+                //Remove the camelCase
+                .AddJsonOptions(options=>
+                {
+                    var resolver = options.SerializerSettings.ContractResolver;
+                    if (resolver != null)
+                        (resolver as DefaultContractResolver).NamingStrategy = null;
+                });
+            //get database connection from the .json configuration file
             services.AddDbContext<PaymentDetailContext>(options => options.UseSqlServer(Configuration.GetConnectionString("DevConnection")));
 
+            services.AddCors();
             // In production, the Angular files will be served from this directory
             services.AddSpaStaticFiles(configuration =>
             {
@@ -54,7 +63,7 @@ namespace AspNetCoreOne
                     template: "{controller}/{action=Index}/{id?}");
             });
 
-            app.UseSpa(spa =>
+           app.UseSpa(spa =>
             {
                 // To learn more about options for serving an Angular SPA from ASP.NET Core,
                 // see https://go.microsoft.com/fwlink/?linkid=864501
@@ -66,6 +75,12 @@ namespace AspNetCoreOne
                     spa.UseAngularCliServer(npmScript: "start");
                 }
             });
+
+            app.UseCors(options =>
+                options.WithOrigins("http://localhost:5000")
+                .AllowAnyMethod()
+                .AllowAnyHeader()
+            );
         }
     }
 }
